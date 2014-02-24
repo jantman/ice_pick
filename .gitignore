@@ -78,3 +78,6 @@ pip-log.txt
 docs/_build/*
 MANIFEST
 builder/*
+
+# Nosetests
+test_coverage
