@@ -176,7 +176,6 @@ class APIRequest(object):
         '''Fetches data from Ice and returns it as a dictonary'''
         request_url = urlparse.urljoin(self.ice_url, 'dashboard/getData')
         data_filters = json.dumps(self._filters)
-        print data_filters
         headers = {
             'content-type': 'application/json;charset=utf-8'
         }
