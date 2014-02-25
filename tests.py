@@ -18,7 +18,7 @@ class TestUtils(unittest.TestCase):
 class TestAPIFilters(unittest.TestCase):
     def test_filter_keys(self):
         '''Tests the name of the filter keys.'''
-        self.assertEquals(APIFilters.ACCOUNT, 'account')
+        self.assertEquals(APIFilters.ACCOUNTS, 'account')
         self.assertEquals(APIFilters.AGGREGATE, 'aggregate')
         self.assertEquals(APIFilters.BREAKDOWN, 'breakdown')
         self.assertEquals(APIFilters.CONSOLIDATE, 'consolidate')
@@ -26,17 +26,17 @@ class TestAPIFilters(unittest.TestCase):
         self.assertEquals(APIFilters.FACTOR_SPS, 'factorsps')
         self.assertEquals(APIFilters.GROUP_BY, 'groupBy')
         self.assertEquals(APIFilters.IS_COST, 'isCost')
-        self.assertEquals(APIFilters.OPERATION, 'operation')
-        self.assertEquals(APIFilters.PRODUCT, 'product')
-        self.assertEquals(APIFilters.REGION, 'region')
+        self.assertEquals(APIFilters.OPERATIONS, 'operation')
+        self.assertEquals(APIFilters.PRODUCTS, 'product')
+        self.assertEquals(APIFilters.REGIONS, 'region')
         self.assertEquals(APIFilters.SHOW_SPS, 'showsps')
         self.assertEquals(APIFilters.START, 'start')
-        self.assertEquals(APIFilters.USAGE_TYPE, 'usageType')
+        self.assertEquals(APIFilters.USAGE_TYPES, 'usageType')
 
     def test_types(self):
         '''Tests the types of the filters.'''
         types = APIFilters.TYPES
-        self.assertEquals(types[APIFilters.ACCOUNT], list)
+        self.assertEquals(types[APIFilters.ACCOUNTS], list)
         self.assertEquals(types[APIFilters.AGGREGATE], str)
         self.assertEquals(types[APIFilters.BREAKDOWN], bool)
         self.assertEquals(types[APIFilters.CONSOLIDATE], str)
@@ -44,12 +44,12 @@ class TestAPIFilters(unittest.TestCase):
         self.assertEquals(types[APIFilters.FACTOR_SPS], bool)
         self.assertEquals(types[APIFilters.GROUP_BY], str)
         self.assertEquals(types[APIFilters.IS_COST], bool)
-        self.assertEquals(types[APIFilters.OPERATION], list)
-        self.assertEquals(types[APIFilters.PRODUCT], list)
-        self.assertEquals(types[APIFilters.REGION], list)
+        self.assertEquals(types[APIFilters.OPERATIONS], list)
+        self.assertEquals(types[APIFilters.PRODUCTS], list)
+        self.assertEquals(types[APIFilters.REGIONS], list)
         self.assertEquals(types[APIFilters.SHOW_SPS], bool)
         self.assertEquals(types[APIFilters.START], datetime.datetime)
-        self.assertEquals(types[APIFilters.USAGE_TYPE], list)
+        self.assertEquals(types[APIFilters.USAGE_TYPES], list)
 
     def test_default_filters(self):
         '''Tests the default filters key/value.'''
@@ -71,12 +71,14 @@ class TestAPIFilters(unittest.TestCase):
 
 class TestAPIRequest(unittest.TestCase):
     api_request = None
+    dummy_ice_url = None
     dummy_list = None
     dummy_string = None
     dummy_datetime = None
 
     def setUp(self):
-        self.api_request = APIRequest('http://foo.com')
+        self.dummy_ice_url = 'http://foo.com'
+        self.api_request = APIRequest(self.dummy_ice_url)
         self.dummy_list = ['012345678900', '009876543210']
         self.dummy_str = 'foo'
         self.dummy_datetime = datetime.datetime.utcnow()
@@ -89,13 +91,13 @@ class TestAPIRequest(unittest.TestCase):
         dummy_filter = 'foo_bar'
         dummy_value = ['foo', 'bar']
         filters = {
-            APIFilters.ACCOUNT: self.dummy_list,
+            APIFilters.ACCOUNTS: self.dummy_list,
             APIFilters.IS_COST: is_cost,
             dummy_filter: dummy_value,
         }
-        api_request = APIRequest(**filters)
+        api_request = APIRequest(self.dummy_ice_url, **filters)
         request_filters = api_request.get_filters()
-        self.assertEquals(request_filters[APIFilters.ACCOUNT],
+        self.assertEquals(request_filters[APIFilters.ACCOUNTS],
                           self._join_list(self.dummy_list))
         self.assertEquals(request_filters[APIFilters.IS_COST], is_cost)
         self.assertEquals(request_filters[dummy_filter], dummy_value)
@@ -135,7 +137,7 @@ class TestAPIRequest(unittest.TestCase):
 
     def test_set_accounts(self):
         '''Tests set_accounts function exception and filter results'''
-        self._test_set_list(self.api_request.set_accounts, APIFilters.ACCOUNT)
+        self._test_set_list(self.api_request.set_accounts, APIFilters.ACCOUNTS)
 
     def test_set_aggregate(self):
         '''Tests set_aggregate function exception and filter results'''
@@ -145,7 +147,7 @@ class TestAPIRequest(unittest.TestCase):
     def test_set_breakdown(self):
         '''Tests set_breakdown function exception and filter results'''
         self._test_set_bool(self.api_request.set_breakdown,
-                           APIFilters.BREAKDOWN, False)
+                            APIFilters.BREAKDOWN, False)
 
     def test_set_consolidate(self):
         '''Tests set_consolidate function exception and filter results'''
@@ -159,7 +161,7 @@ class TestAPIRequest(unittest.TestCase):
     def test_set_factor_sps(self):
         '''Tests set_factor_sps function exception and filter results'''
         self._test_set_bool(self.api_request.set_factor_sps,
-                           APIFilters.FACTOR_SPS, True)
+                            APIFilters.FACTOR_SPS, True)
 
     def test_set_group_by(self):
         '''Tests set_group_by function exception and filter results'''
@@ -169,27 +171,27 @@ class TestAPIRequest(unittest.TestCase):
     def test_set_is_cost(self):
         '''Tests set_is_cost function exception and filter results'''
         self._test_set_bool(self.api_request.set_is_cost,
-                           APIFilters.IS_COST, False)
+                            APIFilters.IS_COST, False)
 
     def test_set_operations(self):
         '''Tests set_operations function exception and filter results'''
         self._test_set_list(self.api_request.set_operations,
-                            APIFilters.OPERATION)
+                            APIFilters.OPERATIONS)
 
     def test_set_products(self):
         '''Tests set_products function exception and filter results'''
         self._test_set_list(self.api_request.set_products,
-                            APIFilters.PRODUCT)
+                            APIFilters.PRODUCTS)
 
     def test_set_regions(self):
         '''Tests set_regions function exception and filter results'''
         self._test_set_list(self.api_request.set_regions,
-                            APIFilters.REGION)
+                            APIFilters.REGIONS)
 
     def test_set_show_sps(self):
         '''Tests set_show_sps function exception and filter results'''
         self._test_set_bool(self.api_request.set_show_sps,
-                           APIFilters.SHOW_SPS, True)
+                            APIFilters.SHOW_SPS, True)
 
     def test_set_start(self):
         '''Tests set_start function exception and filter results'''
@@ -198,4 +200,4 @@ class TestAPIRequest(unittest.TestCase):
     def test_set_usage_types(self):
         '''Tests set_usage_types function exception and filter results'''
         self._test_set_list(self.api_request.set_usage_types,
-                            APIFilters.USAGE_TYPE)
+                            APIFilters.USAGE_TYPES)

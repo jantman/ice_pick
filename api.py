@@ -4,10 +4,11 @@ import urlparse
 import requests
 import exceptions
 import utils
+from filters import group_by as _group_by, consolidate as _consolidate
 
 
 class APIFilters(object):
-    ACCOUNT = 'account'
+    ACCOUNTS = 'account'
     AGGREGATE = 'aggregate'
     BREAKDOWN = 'breakdown'
     CONSOLIDATE = 'consolidate'
@@ -15,16 +16,16 @@ class APIFilters(object):
     FACTOR_SPS = 'factorsps'
     GROUP_BY = 'groupBy'
     IS_COST = 'isCost'
-    OPERATION = 'operation'
-    PRODUCT = 'product'
-    REGION = 'region'
+    OPERATIONS = 'operation'
+    PRODUCTS = 'product'
+    REGIONS = 'region'
     SHOW_SPS = 'showsps'
     START = 'start'
-    USAGE_TYPE = 'usageType'
+    USAGE_TYPES = 'usageType'
 
     # Filter key type map
     TYPES = {
-        ACCOUNT: list,
+        ACCOUNTS: list,
         AGGREGATE: str,
         BREAKDOWN: bool,
         CONSOLIDATE: str,
@@ -32,12 +33,12 @@ class APIFilters(object):
         FACTOR_SPS: bool,
         GROUP_BY: str,
         IS_COST: bool,
-        OPERATION: list,
-        PRODUCT: list,
-        REGION: list,
+        OPERATIONS: list,
+        PRODUCTS: list,
+        REGIONS: list,
         SHOW_SPS: bool,
         START: datetime.datetime,
-        USAGE_TYPE: list,
+        USAGE_TYPES: list,
     }
 
     @classmethod
@@ -48,11 +49,11 @@ class APIFilters(object):
         return {
             cls.AGGREGATE: 'data',
             cls.BREAKDOWN: True,
-            cls.CONSOLIDATE: 'monthly',
+            cls.CONSOLIDATE: _consolidate.MONTHLY,
             cls.START: utils.format_datetime(start_datetime),
             cls.END: utils.format_datetime(end_datetime),
             cls.FACTOR_SPS: False,
-            cls.GROUP_BY: 'Product',
+            cls.GROUP_BY: _group_by.PRODUCT,
             cls.IS_COST: True,
             cls.SHOW_SPS: False,
         }
@@ -69,7 +70,7 @@ class APIRequest(object):
 
     def __init__(self, ice_url, **filters):
         ''':params ice_url: base URL to you Ice instance. It must include\
-        "http" or "https://".
+        "http" or "https://" and ending with "/".
         :type ice_url: str or unicode.
         '''
         self.ice_url = ice_url
@@ -122,7 +123,7 @@ class APIRequest(object):
 
     def set_accounts(self, account_list):
         '''Parses the account list and adds it to the filters'''
-        self._set_one_filter(APIFilters.ACCOUNT, account_list)
+        self._set_one_filter(APIFilters.ACCOUNTS, account_list)
 
     def set_aggregate(self, aggregate):
         self._set_one_filter(APIFilters.AGGREGATE, aggregate)
@@ -147,15 +148,15 @@ class APIRequest(object):
 
     def set_operations(self, operation_list):
         '''Parses the operation list and adds it to the filters'''
-        self._set_one_filter(APIFilters.OPERATION, operation_list)
+        self._set_one_filter(APIFilters.OPERATIONS, operation_list)
 
     def set_products(self, product_list):
         '''Parses the product list and adds it to the filters'''
-        self._set_one_filter(APIFilters.PRODUCT, product_list)
+        self._set_one_filter(APIFilters.PRODUCTS, product_list)
 
     def set_regions(self, region_list):
         '''Parses the region list and adds it to the filters'''
-        self._set_one_filter(APIFilters.REGION, region_list)
+        self._set_one_filter(APIFilters.REGIONS, region_list)
 
     def set_show_sps(self, show_sps):
         self._set_one_filter(APIFilters.SHOW_SPS, show_sps)
@@ -165,7 +166,7 @@ class APIRequest(object):
 
     def set_usage_types(self, usage_type_list):
         '''Parses the region list and adds it to the filters'''
-        self._set_one_filter(APIFilters.USAGE_TYPE, usage_type_list)
+        self._set_one_filter(APIFilters.USAGE_TYPES, usage_type_list)
 
     def get_filters(self):
         ''' Returns a copy of the current API filters.'''
@@ -175,6 +176,7 @@ class APIRequest(object):
         '''Fetches data from Ice and returns it as a dictonary'''
         request_url = urlparse.urljoin(self.ice_url, 'dashboard/getData')
         data_filters = json.dumps(self._filters)
+        print data_filters
         headers = {
             'content-type': 'application/json;charset=utf-8'
         }
@@ -184,5 +186,5 @@ class APIRequest(object):
             response = r.content
             data = json.loads(response)
             return data
-        raise exceptions.APIRequestException('POST', self.ice_url,
+        raise exceptions.APIRequestException('POST', request_url,
                                              status_code)
