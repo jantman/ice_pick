@@ -1,6 +1,6 @@
 # Ice Pick
 
-Python library that allows you to request/scrape what you Ice instance display on the summary page.
+Python library that allows you to request/scrape what your Ice instance display on the summary page.
 
 
 
@@ -11,7 +11,7 @@ Python library that allows you to request/scrape what you Ice instance display o
 
 ## Getting Started
 
-Using ice_pick is very simple, you just have to import the APIRequest and your are able to start querying Ice data.
+Using ice_pick is very simple, you just have to import the APIRequest and you are able to start querying Ice data.
 
 ### Getting the Summary Table Data
 

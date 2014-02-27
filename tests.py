@@ -201,3 +201,6 @@ class TestAPIRequest(unittest.TestCase):
         '''Tests set_usage_types function exception and filter results'''
         self._test_set_list(self.api_request.set_usage_types,
                             APIFilters.USAGE_TYPES)
+
+if __name__ == '__main__':
+    unittest.main()
