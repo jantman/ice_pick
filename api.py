@@ -69,8 +69,8 @@ class APIRequest(object):
     _data = None
 
     def __init__(self, ice_url, **filters):
-        ''':params ice_url: base URL to you Ice instance. It must include\
-        "http" or "https://" and ending with "/".
+        ''':params ice_url: base URL to your Ice instance. It must include\
+        "http" or "https://" and end with "/".
         :type ice_url: str or unicode.
         '''
         self.ice_url = ice_url
@@ -165,7 +165,7 @@ class APIRequest(object):
         self._set_one_filter(APIFilters.START, start)
 
     def set_usage_types(self, usage_type_list):
-        '''Parses the region list and adds it to the filters'''
+        '''Parses the usage type list and adds it to the filters'''
         self._set_one_filter(APIFilters.USAGE_TYPES, usage_type_list)
 
     def get_filters(self):
