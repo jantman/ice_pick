@@ -1,7 +1,6 @@
 # Ice Pick
 
-Python library that allows you to request/scrape what your Ice instance display on the summary page.
-
+A Python library that allows easy access to AWS billing data collected by the Netflix OSS Ice tool.
 
 
 ## Installation
@@ -11,13 +10,13 @@ Python library that allows you to request/scrape what your Ice instance display 
 
 ## Getting Started
 
-Using ice_pick is very simple, you just have to import the APIRequest and you are able to start querying Ice data.
+Using ice_pick is simple.  Once you have an instance of the Netflix OSS Ice application configured for your AWS account, you can just import the APIRequest, point to your Ice url, and start querying.
 
 ### Getting the Summary Table Data
 
 	from ice_pick.api import APIRequest
 	
-	ice_url = 'http://example.com/'  # URL to your Ice instance
+	ice_url = 'http://example.com/ice/'  # URL to your Ice instance
 	api_request = APIRequest(ice_url)
 	data = api_request.get_data()
 	
@@ -71,7 +70,7 @@ Using ice_pick is very simple, you just have to import the APIRequest and you ar
 		u'time': [1391212800000]
 	}
 
-By default **ice-pick** is making using of the following filters:
+By default **ice-pick** uses the following filters:
 
 	{
 		'aggregate': 'data',
@@ -85,7 +84,7 @@ By default **ice-pick** is making using of the following filters:
 		'start': '2014-02-01 12AM'
 	}
 	
-The *start* and *end* data are by default based on the current UCT date time.
+The *start* and *end* dates are based on current (UTC) time by default.
 
 ### Filtering by Products
 
@@ -187,7 +186,7 @@ The *start* and *end* data are by default based on the current UCT date time.
 
 ### Initializing And Overriding Default Filtering
 
-You can pass all the filter you want to apply at the moment you initialize the APIRequest.
+You can pass all the filters you want to apply at the moment you initialize the APIRequest.
 
 	from ice_pick.filters import consolidate as _consolidate
 	from ice_pick.filters import group_by as _group_by
@@ -214,7 +213,7 @@ You can pass all the filter you want to apply at the moment you initialize the A
 
 ### Getting The Current Filters
 
-You can get a opt of the current filters that were used on the last request or that are going to be used on the next one.
+You can check which filters were active on the last request, and which filters will be used for the next request.
 
 	api_request.get_filters()
 
