@@ -62,6 +62,6 @@ Basic usage:
 
 __title__ = 'ice_pick'
 __version__ = '0.1'
-__author__ = ''  # TODO: Specify this information. What should we put here? HJ or DM?
+__author__ = 'Harrington Joseph'
 __license__ = 'Apache 2.0'
-__copyright__ = ''  # TODO: Specify this information
+__copyright__ = 'Copyright 2014 Demand Media'

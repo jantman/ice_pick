@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+
+import ice_pick
+
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+
+packages = [
+    'ice_pick',
+    'ice_pick.filters',
+]
+
+requires = []
+with open('requirements.txt') as f:
+    requires = f.read().split('\n')
+
+setup(name=ice_pick.__title__,
+      version=ice_pick.__version__,
+      description='Python data access interface for Netflix OSS Ice Tool',
+      author=ice_pick.__author__,
+      author_email='',
+      url='',  # TODO Create a url for the project.
+      license='Apache 2.0',
+      packages=packages,
+      package_dir={'ice_pick': 'ice_pick'},
+      install_requires=requires,
+      classifiers=('Development Status :: 5 - Production/Stable',
+                   'Intended Audience :: Developers',
+                   'Natural Language :: English',
+                   'License :: OSI Approved :: Apache Software License',
+                   'Programming Language :: Python',
+                   'Programming Language :: Python :: 2.6',
+                   'Programming Language :: Python :: 2.7',
+      )
+)
