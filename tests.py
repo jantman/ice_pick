@@ -1,7 +1,7 @@
 import unittest
 import datetime
-import utils
-from api import APIRequest, APIFilters
+from ice_pick import utils
+from ice_pick.api import APIRequest, APIFilters
 
 
 class TestUtils(unittest.TestCase):
