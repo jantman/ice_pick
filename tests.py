@@ -1,7 +1,10 @@
 import unittest
+from mock import patch
 import datetime
 import utils
+import api
 from api import APIRequest, APIFilters
+from exceptions import APIRequestException
 
 
 class TestUtils(unittest.TestCase):
@@ -201,6 +204,36 @@ class TestAPIRequest(unittest.TestCase):
         '''Tests set_usage_types function exception and filter results'''
         self._test_set_list(self.api_request.set_usage_types,
                             APIFilters.USAGE_TYPES)
+
+    def test_get_data(self):
+        '''Tests the get_data function by mocking the requests.post'''
+        class MockResponse():
+            def __init__(self, status_code):
+                self.status_code = status_code
+
+            @property
+            def content(self):
+                return '''{
+                    "data": {},
+                    "groupBy": {},
+                    "interval": 3600000,
+                    "start": 1380585600000,
+                    "stats": {},
+                    "status": 200
+                }'''
+
+        with patch.object(api, 'requests') as mock_request:
+            # Testing that if the post request comes back with a status_code
+            # different than 200, the function get_data will raise an
+            # APIRequestException.
+            mock_request.post.return_value = MockResponse(500)
+            self.assertRaises(APIRequestException, self.api_request.get_data)
+
+            # Testing that if the post request status_code is 200, the function
+            # get_data will return a dictionary.
+            mock_request.post.return_value = MockResponse(200)
+            self.assertTrue(isinstance(self.api_request.get_data(), dict))
+
 
 if __name__ == '__main__':
     unittest.main()
