@@ -1,3 +1,26 @@
+"""
+ice_pick.filters.usage_types
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This module contains a set of constants that can be used as usage type
+filters. All the constants are based on AWS definitions.
+
+Copyright 2014 Demand Media.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+"""
+
+
 AP_DATA_TRANSFER_OUT_BYTES = 'AP-DataTransfer-Out-Bytes'
 AP_REQUEST_TIER_1 = 'AP-Requests-Tier1'
 AP_REQUEST_TIER_2_HTTPS = 'AP-Requests-Tier2-HTTPS'
