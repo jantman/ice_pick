@@ -2,7 +2,10 @@ import unittest
 from mock import patch
 import datetime
 from ice_pick import utils
+from ice_pick.exceptions import APIRequestException
+from ice_pick import api
 from ice_pick.api import APIRequest, APIFilters
+
 
 class TestUtils(unittest.TestCase):
     def test_format_datetime(self):
@@ -219,7 +222,7 @@ class TestAPIRequest(unittest.TestCase):
                     "status": 200
                 }'''
 
-        with patch.object(api, 'requests') as mock_request:
+        with patch.object(api, '_requests') as mock_request:
             # Testing that if the post request comes back with a status_code
             # different than 200, the function get_data will raise an
             # APIRequestException.
