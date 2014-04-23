@@ -22,11 +22,11 @@ Copyright 2014 Demand Media.
 
 
 import datetime
-import json
-import urlparse
-import requests
-import exceptions
-import utils
+import json as _json
+import urlparse as _urlparse
+import requests as _requests
+import exceptions as _exceptions
+import utils as _utils
 from filters import group_by as _group_by, consolidate as _consolidate
 
 
@@ -73,8 +73,8 @@ class APIFilters(object):
             cls.AGGREGATE: 'data',
             cls.BREAKDOWN: True,
             cls.CONSOLIDATE: _consolidate.MONTHLY,
-            cls.START: utils.format_datetime(start_datetime),
-            cls.END: utils.format_datetime(end_datetime),
+            cls.START: _utils.format_datetime(start_datetime),
+            cls.END: _utils.format_datetime(end_datetime),
             cls.FACTOR_SPS: False,
             cls.GROUP_BY: _group_by.PRODUCT,
             cls.IS_COST: True,
@@ -134,7 +134,7 @@ class APIRequest(object):
 
     def _set_filter_datetime(self, filter_key, value):
         if isinstance(value, datetime.datetime):
-            self._filters[filter_key] = utils.format_datetime(value)
+            self._filters[filter_key] = _utils.format_datetime(value)
         else:
             raise TypeError('Parameter %s must be a datetime.' % filter_key)
 
@@ -197,16 +197,16 @@ class APIRequest(object):
 
     def get_data(self):
         '''Fetches data from Ice and returns it as a dictonary'''
-        request_url = urlparse.urljoin(self.ice_url, 'dashboard/getData')
-        data_filters = json.dumps(self._filters)
+        request_url = _urlparse.urljoin(self.ice_url, 'dashboard/getData')
+        data_filters = _json.dumps(self._filters)
         headers = {
             'content-type': 'application/json;charset=utf-8'
         }
-        r = requests.post(request_url, data=data_filters, headers=headers)
+        r = _requests.post(request_url, data=data_filters, headers=headers)
         status_code = r.status_code
         if status_code == 200:
             response = r.content
-            data = json.loads(response)
+            data = _json.loads(response)
             return data
-        raise exceptions.APIRequestException('POST', request_url,
-                                             status_code)
+        raise _exceptions.APIRequestException('POST', request_url,
+                                              status_code)
