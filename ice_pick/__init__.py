@@ -77,7 +77,7 @@ Copyright 2014 Demand Media.
 
 
 __title__ = 'ice_pick'
-__version__ = '0.1'
+__version__ = '0.2'
 __author__ = 'Demand Media'
 __license__ = 'Apache 2.0'
 __copyright__ = 'Copyright 2014 Demand Media'
