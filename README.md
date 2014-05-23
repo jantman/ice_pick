@@ -5,8 +5,7 @@ A Python library that allows easy access to AWS billing data collected by the Ne
 
 ## Installation
 
-**TODO**
-
+    pip install ice-pick
 
 ## Getting Started
 
