@@ -1,10 +1,13 @@
 import unittest
-from mock import patch
+from mock import patch, call, Mock
 import datetime
 from ice_pick import utils
 from ice_pick.exceptions import APIRequestException
 from ice_pick import api
 from ice_pick.api import APIRequest, APIFilters
+from ice_pick.groups import Groups
+import logging
+from contextlib import nested
 
 
 class TestUtils(unittest.TestCase):
@@ -234,6 +237,97 @@ class TestAPIRequest(unittest.TestCase):
             mock_request.post.return_value = MockResponse(200)
             self.assertTrue(isinstance(self.api_request.get_data(), dict))
 
+
+class TestGroups(unittest.TestCase):
+    api_request = None
+    dummy_ice_url = None
+    dummy_list = None
+    dummy_string = None
+    dummy_datetime = None
+
+    def setUp(self):
+        self.dummy_ice_url = 'http://foo.com/'
+        self.mock_logger = Mock(spec_set=logging.Logger)
+        self.mock_requests = Mock()
+        self.mock_get = Mock()
+        self.mock_post = Mock()
+        with nested(
+                patch('ice_pick.groups.logger', new=self.mock_logger),
+                patch('ice_pick.groups._requests', new=self.mock_requests),
+                patch('ice_pick.groups.Groups._ice_get', new=self.mock_get),
+                patch('ice_pick.groups.Groups._ice_post', new=self.mock_post)
+        ):
+            self.groups = Groups(self.dummy_ice_url, dry_run=False)
+            self.dry_run_groups = Groups(self.dummy_ice_url, dry_run=True)
+        self.mock_logger.reset_mock()
+
+    """
+    def test_api_request_filter(self):
+        is_cost = False
+        dummy_filter = 'foo_bar'
+        dummy_value = ['foo', 'bar']
+        filters = {
+            APIFilters.ACCOUNTS: self.dummy_list,
+            APIFilters.IS_COST: is_cost,
+            dummy_filter: dummy_value,
+        }
+        api_request = APIRequest(self.dummy_ice_url, **filters)
+        request_filters = api_request.get_filters()
+        self.assertEquals(request_filters[APIFilters.ACCOUNTS],
+                          self._join_list(self.dummy_list))
+        self.assertEquals(request_filters[APIFilters.IS_COST], is_cost)
+        self.assertEquals(request_filters[dummy_filter], dummy_value)
+    """
+
+    def test_init(self):
+        g = Groups(self.dummy_ice_url)
+        self.assertEquals(g.ice_url, self.dummy_ice_url)
+        self.assertEquals(g.dry_run, False)
+        self.assertEquals(self.mock_logger.mock_calls, [])
+        self.assertEquals(self.mock_requests.mock_calls, [])
+        self.assertEquals(self.mock_get.mock_calls, [])
+        self.assertEquals(self.mock_post.mock_calls, [])
+
+    def test_init_bad_url(self):
+        self.assertRaises(ValueError, Groups, 'foobar')
+        self.assertEquals(self.mock_logger.mock_calls, [])
+        self.assertEquals(self.mock_requests.mock_calls, [])
+        self.assertEquals(self.mock_get.mock_calls, [])
+        self.assertEquals(self.mock_post.mock_calls, [])
+
+    def test_init_dry_run(self):
+        with patch('ice_pick.groups.logger', spec_set=logging.Logger) as mock_logger:
+            g = Groups(self.dummy_ice_url, dry_run=True)
+        self.assertEquals(g.dry_run, True)
+        self.assertEquals(mock_logger.mock_calls,
+                          [call.warning('DRY RUN only - will not make any changes')]
+        )
+        self.assertEquals(self.mock_requests.mock_calls, [])
+        self.assertEquals(self.mock_get.mock_calls, [])
+        self.assertEquals(self.mock_post.mock_calls, [])
+
+    def test_delete_application_group_dry_run(self):
+        self.dry_run_groups.delete_application_group('foo')
+        self.assertEquals(self.mock_logger.mock_calls,
+                          [call.warning('DRY RUN only - will not make any changes')]
+        )
+        self.assertEquals(self.mock_get.mock_calls, [])
+        self.assertEquals(self.mock_post.mock_calls, [])
+
+    def test_delete_application_group(self):
+        mock_get = Mock()
+        with patch('ice_pick.groups.Groups._ice_get', new=mock_get):
+            groups = Groups(self.dummy_ice_url, dry_run=False)
+        """
+        self.groups.delete_application_group('foo')
+        self.assertEquals(self.mock_logger.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [call('deleteApplicationGroup?name=foo')])
+        self.assertEquals(self.mock_post.mock_calls, [])
+        """
+        groups.delete_application_group('foo')
+        self.assertEquals(self.mock_logger.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [call('deleteApplicationGroup?name=foo')])
+        self.assertEquals(self.mock_post.mock_calls, [])
 
 if __name__ == '__main__':
     unittest.main()
