@@ -12,6 +12,8 @@ import datetime
 from collections import defaultdict
 import urlparse as _urlparse
 from exceptions import APIRequestException
+from api import APIRequest
+from filters import group_by as _group_by
 
 # Set default logging handler to avoid "No handler found" warnings.
 import logging
@@ -96,14 +98,17 @@ class Groups(object):
         :rtype: dict
         :raises: exceptions.APIRequestException
         """
-        url = _urlparse.urljoin(self.ice_url, 'dashboard', path)
+        url = _urlparse.urljoin(self.ice_url + 'dashboard/', path)
+        if self.dry_run:
+            logger.warning("DRY RUN: Would POST to {u}: {p}".format(u=url, p=params))
+            return
         logger.debug("POSTing to {u}: {p}".format(u=url, p=params))
         res = _requests.post(url, data=json.dumps(params))
         if res.status_code != 200:
-            raise APIRequestException('GET', url, res.status_code)
+            raise APIRequestException('POST', url, res.status_code)
         resp = res.json()
         if resp['status'] != 200:
-            raise APIRequestException('GET', url, resp['status'])
+            raise APIRequestException('POST', url, resp['status'])
         if 'data' in resp:
             return resp['data']
         return {}
@@ -117,24 +122,26 @@ class Groups(object):
         """
         return [x['name'] for x in self._ice_get('getAccounts?')]
 
-    def get_regions_for_account(self, acct):
+    def get_regions_for_account(self, accounts):
         """
         Get a list of AWS region names for the given account.
 
-        :param acct: account name, as returned in ``get_account_names()``
-        :type acct: string
+        :param accounts: list of account names, as returned in ``get_account_names()``
+        :type accounts: list of strings
         :returns: list of regions for the account
         :rtype: list of strings
         """
-        return [r['name'] for r in self._ice_get('getRegions?account={acct}'.format(acct=acct))]
+        if not isinstance(accounts, list):
+            raise TypeError("accounts parameter must be a list of strings")
+        return [r['name'] for r in self._ice_get('getRegions?account={acct}'.format(acct='%2C'.join(accounts)))]
 
-    def get_all_resource_groups(self, acct, regions, products):
+    def get_all_resource_groups(self, accounts, regions, products):
         """
         Get all Resource Group names from Ice.
         This is a wrapper arouns 
 
-        :param acct: account name, as returned in ``get_account_names()``
-        :type acct: string
+        :param accounts: list of account names, as returned in ``get_account_names()``
+        :type accounts: list of strings
         :param regions: list of regions to get resource groups for
         :type regions: list of strings
         :param products: list of product names to get resource groups for
@@ -142,26 +149,30 @@ class Groups(object):
         :returns: list of resource group names
         :rtype: list of strings
         """
+        if not isinstance(accounts, list):
+            raise TypeError("accounts parameter must be a list of strings")
         url = 'getResourceGroups?account={acct}&product={products}&region={regions}'.format(
-            acct=acct,
+            acct='%2C'.join(accounts),
             regions='%2C'.join(regions),
             products='%2C'.join(products)
         )
         return [g['name'] for g in self._ice_get(url)]
 
-    def get_products(self, acct, regions):
+    def get_products(self, accounts, regions):
         """
         Get a list of product name strings for the given account and region.
 
-        :param acct: AWS account ID
-        :type acct: string
+        :param accounts: list of account names, as returned in ``get_account_names()``
+        :type accounts: list of strings
         :param regions: regions to query data for
         :type regions: list of strings
         :returns: list of product names
         :rtype: list of strings
         """
+        if not isinstance(accounts, list):
+            raise TypeError("accounts parameter must be a list of strings")
         path = 'getProducts?account={acct}&region={regions}&showResourceGroups=true'.format(
-            acct=acct,
+            acct='%2C'.join(accounts),
             regions='%2C'.join(regions)
         )
         return [r['name'] for r in self._ice_get(path)]
@@ -198,12 +209,16 @@ class Groups(object):
 
         :rtype: list of strings
         """
-        raise NotImplementedError('@TODO change this to use the API class?')
-        end = datetime.datetime.now().strftime('%Y-%m-%d')
-        params = {"isCost":True,"aggregate":"stats","groupBy":"ApplicationGroup","consolidate":"weekly","end":end,"breakdown":True,"showsps":False,"factorsps":False,"spans":4}
-        result = self._ice_post('getData', params)
-        groups = [k for k in result]
-        return groups
+        end_dt = datetime.datetime.utcnow()
+        start_dt = end_dt - datetime.timedelta(weeks=4)
+        req = APIRequest(self.ice_url)
+        req.set_aggregate('stats')
+        req.set_group_by(_group_by.APPLICATION_GROUP)
+        req.set_end(end_dt)
+        req.set_start(start_dt)
+        result = req.get_data()
+        names = [k for k in result]
+        return names
 
     def get_application_group(self, group_name):
         """
