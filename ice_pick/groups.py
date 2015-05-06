@@ -71,7 +71,7 @@ class Groups(object):
         :rtype: dict
         :raises: exceptions.APIRequestException
         """
-        url = _urlparse.urljoin(self.ice_url, 'dashboard', path)
+        url = _urlparse.urljoin(self.ice_url + 'dashboard/', path)
         logger.debug("GETing {u}".format(u=url))
         res = _requests.get(url)
         if res.status_code != 200:
@@ -115,9 +115,7 @@ class Groups(object):
         :returns: list of account names
         :rtype: list of strings
         """
-        data = self._ice_get('getAccounts?')
-        res = [x['name'] for x in data]
-        return res
+        return [x['name'] for x in self._ice_get('getAccounts?')]
 
     def get_regions_for_account(self, acct):
         """
@@ -130,11 +128,15 @@ class Groups(object):
         """
         return [r['name'] for r in self._ice_get('getRegions?account={acct}'.format(acct=acct))]
 
-    def get_all_resource_groups(self, products):
+    def get_all_resource_groups(self, acct, regions, products):
         """
         Get all Resource Group names from Ice.
         This is a wrapper arouns 
 
+        :param acct: account name, as returned in ``get_account_names()``
+        :type acct: string
+        :param regions: list of regions to get resource groups for
+        :type regions: list of strings
         :param products: list of product names to get resource groups for
         :type products: list of strings
         :returns: list of resource group names
@@ -145,9 +147,7 @@ class Groups(object):
             regions='%2C'.join(regions),
             products='%2C'.join(products)
         )
-        data = self._ice_get(url)
-        groups = [g['name'] for g in data]
-        return groups
+        return [g['name'] for g in self._ice_get(url)]
 
     def get_products(self, acct, regions):
         """
@@ -164,9 +164,7 @@ class Groups(object):
             acct=acct,
             regions='%2C'.join(regions)
         )
-        rgs = self._ice_get(path)
-        products = [r['name'] for r in rgs]
-        return products
+        return [r['name'] for r in self._ice_get(path)]
 
     def get_resource_group_lists(self):
         """

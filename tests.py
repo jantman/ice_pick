@@ -237,97 +237,298 @@ class TestAPIRequest(unittest.TestCase):
             mock_request.post.return_value = MockResponse(200)
             self.assertTrue(isinstance(self.api_request.get_data(), dict))
 
-
+@patch('ice_pick.groups.logger', spec_set=logging.Logger)
+@patch('ice_pick.groups._requests')
+@patch('ice_pick.groups.Groups._ice_get')
+@patch('ice_pick.groups.Groups._ice_post')
 class TestGroups(unittest.TestCase):
-    api_request = None
-    dummy_ice_url = None
-    dummy_list = None
-    dummy_string = None
-    dummy_datetime = None
 
     def setUp(self):
         self.dummy_ice_url = 'http://foo.com/'
-        self.mock_logger = Mock(spec_set=logging.Logger)
-        self.mock_requests = Mock()
-        self.mock_get = Mock()
-        self.mock_post = Mock()
-        with nested(
-                patch('ice_pick.groups.logger', new=self.mock_logger),
-                patch('ice_pick.groups._requests', new=self.mock_requests),
-                patch('ice_pick.groups.Groups._ice_get', new=self.mock_get),
-                patch('ice_pick.groups.Groups._ice_post', new=self.mock_post)
-        ):
-            self.groups = Groups(self.dummy_ice_url, dry_run=False)
-            self.dry_run_groups = Groups(self.dummy_ice_url, dry_run=True)
-        self.mock_logger.reset_mock()
 
-    """
-    def test_api_request_filter(self):
-        is_cost = False
-        dummy_filter = 'foo_bar'
-        dummy_value = ['foo', 'bar']
-        filters = {
-            APIFilters.ACCOUNTS: self.dummy_list,
-            APIFilters.IS_COST: is_cost,
-            dummy_filter: dummy_value,
-        }
-        api_request = APIRequest(self.dummy_ice_url, **filters)
-        request_filters = api_request.get_filters()
-        self.assertEquals(request_filters[APIFilters.ACCOUNTS],
-                          self._join_list(self.dummy_list))
-        self.assertEquals(request_filters[APIFilters.IS_COST], is_cost)
-        self.assertEquals(request_filters[dummy_filter], dummy_value)
-    """
-
-    def test_init(self):
+    def test_init(self, mock_post, mock_get, mock_requests, mock_logger):
         g = Groups(self.dummy_ice_url)
         self.assertEquals(g.ice_url, self.dummy_ice_url)
         self.assertEquals(g.dry_run, False)
-        self.assertEquals(self.mock_logger.mock_calls, [])
-        self.assertEquals(self.mock_requests.mock_calls, [])
-        self.assertEquals(self.mock_get.mock_calls, [])
-        self.assertEquals(self.mock_post.mock_calls, [])
+        self.assertEquals(mock_logger.mock_calls, [])
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [])
+        self.assertEquals(mock_post.mock_calls, [])
 
-    def test_init_bad_url(self):
+    def test_init_bad_url(self, mock_post, mock_get, mock_requests, mock_logger):
         self.assertRaises(ValueError, Groups, 'foobar')
-        self.assertEquals(self.mock_logger.mock_calls, [])
-        self.assertEquals(self.mock_requests.mock_calls, [])
-        self.assertEquals(self.mock_get.mock_calls, [])
-        self.assertEquals(self.mock_post.mock_calls, [])
+        self.assertEquals(mock_logger.mock_calls, [])
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [])
+        self.assertEquals(mock_post.mock_calls, [])
 
-    def test_init_dry_run(self):
-        with patch('ice_pick.groups.logger', spec_set=logging.Logger) as mock_logger:
-            g = Groups(self.dummy_ice_url, dry_run=True)
+    def test_init_dry_run(self, mock_post, mock_get, mock_requests, mock_logger):
+        g = Groups(self.dummy_ice_url, dry_run=True)
         self.assertEquals(g.dry_run, True)
         self.assertEquals(mock_logger.mock_calls,
                           [call.warning('DRY RUN only - will not make any changes')]
         )
-        self.assertEquals(self.mock_requests.mock_calls, [])
-        self.assertEquals(self.mock_get.mock_calls, [])
-        self.assertEquals(self.mock_post.mock_calls, [])
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [])
+        self.assertEquals(mock_post.mock_calls, [])
 
-    def test_delete_application_group_dry_run(self):
-        self.dry_run_groups.delete_application_group('foo')
-        self.assertEquals(self.mock_logger.mock_calls,
-                          [call.warning('DRY RUN only - will not make any changes')]
+    def test_get_account_names(self, mock_post, mock_get, mock_requests, mock_logger):
+        mock_get.return_value = [
+            {'name': '1234'},
+            {'name': '5678'}
+        ]
+        g = Groups(self.dummy_ice_url, dry_run=False)
+        res = g.get_account_names()
+        self.assertEquals(mock_logger.mock_calls,
+                          []
         )
-        self.assertEquals(self.mock_get.mock_calls, [])
-        self.assertEquals(self.mock_post.mock_calls, [])
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [call('getAccounts?')])
+        self.assertEquals(mock_post.mock_calls, [])
+        self.assertEquals(res, ['1234', '5678'])
 
-    def test_delete_application_group(self):
-        mock_get = Mock()
-        with patch('ice_pick.groups.Groups._ice_get', new=mock_get):
-            groups = Groups(self.dummy_ice_url, dry_run=False)
-        """
-        self.groups.delete_application_group('foo')
-        self.assertEquals(self.mock_logger.mock_calls, [])
-        self.assertEquals(mock_get.mock_calls, [call('deleteApplicationGroup?name=foo')])
-        self.assertEquals(self.mock_post.mock_calls, [])
-        """
+    def test_get_regions_for_account(self, mock_post, mock_get, mock_requests, mock_logger):
+        mock_get.return_value = [
+            {"name":"ap-northeast-1"},
+            {"name":"us-east-1"},
+            {"name":"us-west-2"}
+        ]
+        g = Groups(self.dummy_ice_url, dry_run=False)
+        res = g.get_regions_for_account('123456')
+        self.assertEquals(mock_logger.mock_calls,
+                          []
+        )
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [call('getRegions?account=123456')])
+        self.assertEquals(mock_post.mock_calls, [])
+        self.assertEquals(res, ["ap-northeast-1", "us-east-1", "us-west-2"])
+
+    def test_get_all_resource_groups(self, mock_post, mock_get, mock_requests, mock_logger):
+        mock_get.return_value = [
+            {"name":"tag1_tagA"},
+            {"name":"tag2_tagA"},
+            {"name":"tag1_tagB"},
+            {"name":"tag2_tagB"},
+        ]
+        url = 'getResourceGroups?account=23456&product=ec2%2Cs3%2Crds&region=us-east-1%2Cus-west-2'
+        g = Groups(self.dummy_ice_url, dry_run=False)
+        res = g.get_all_resource_groups('23456', ['us-east-1', 'us-west-2'], ['ec2', 's3', 'rds'])
+        self.assertEquals(mock_logger.mock_calls,
+                          []
+        )
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [call(url)])
+        self.assertEquals(mock_post.mock_calls, [])
+        self.assertEquals(res, ["tag1_tagA", "tag2_tagA", "tag1_tagB", "tag2_tagB"])
+
+    def test_get_products(self, mock_post, mock_get, mock_requests, mock_logger):
+        mock_get.return_value = [
+            {"name":"cloudfront"},
+            {"name":"cloudwatch"},
+            {"name":"ebs"},
+        ]
+        url = 'getProducts?account=23456&region=us-east-1%2Cus-west-2&showResourceGroups=true'
+        g = Groups(self.dummy_ice_url, dry_run=False)
+        res = g.get_products('23456', ['us-east-1', 'us-west-2'])
+        self.assertEquals(mock_logger.mock_calls,
+                          []
+        )
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [call(url)])
+        self.assertEquals(mock_post.mock_calls, [])
+        self.assertEquals(res, ["cloudfront", "cloudwatch", "ebs"])
+
+    def test_get_resource_group_lists(self, mock_post, mock_get, mock_requests, mock_logger):
+        mock_get.return_value = [
+            {
+                "product": { "name": "vpc" },
+                "data": []
+            },
+            {
+                "product": { "name":"rds" },
+                "data":[
+                    {"name":"tag1_tagA"},
+                    {"name":"tag2_tagA"},
+                    {"name":"tag1_tagB"},
+                    {"name":"tag2_tagB"},
+                ]
+            },
+            {
+                "product": { "name":"ebs" },
+                "data":[
+                    {"name":"tag1_tagA"},
+                    {"name":"tag2_tagA"},
+                    {"name":"tag1_tagB"},
+                    {"name":"tag2_tagB"},
+                ]
+            },
+        ]
+        url = 'getResourceGroupLists?'
+        expected = {
+            "vpc": [],
+            "rds": [
+                "tag1_tagA",
+                "tag2_tagA",
+                "tag1_tagB",
+                "tag2_tagB",
+            ],
+            "ebs": [
+                "tag1_tagA",
+                "tag2_tagA",
+                "tag1_tagB",
+                "tag2_tagB",
+            ],
+        }
+
+        g = Groups(self.dummy_ice_url, dry_run=False)
+        res = g.get_resource_group_lists()
+        self.assertEquals(mock_logger.mock_calls,
+                          []
+        )
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [call(url)])
+        self.assertEquals(mock_post.mock_calls, [])
+        self.assertEquals(res, expected)
+
+    def test_get_application_group(self, mock_post, mock_get, mock_requests, mock_logger):
+        mock_get.return_value = {
+            "name": "AppGroup",
+            "owner": "nobody@example.com",
+            "data": {
+                "cloudwatch": [
+                    {"name":"tag1_tagA"},
+                    {"name":"tag2_tagA"},
+                    {"name":"tag1_tagB"},
+                    {"name":"tag2_tagB"},
+                ],
+                "ec2": [
+                    {"name":"tag1_tagB"},
+                    {"name":"tag2_tagB"},
+                ],
+                "ebs": [
+                    {"name":"tag1_tagA"},
+                    {"name":"tag2_tagA"},
+                ],
+            },
+        }
+        url = 'getApplicationGroup?name=foobar'
+        g = Groups(self.dummy_ice_url, dry_run=False)
+        res = g.get_application_group('foobar')
+        self.assertEquals(mock_logger.mock_calls,
+                          []
+        )
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [call(url)])
+        self.assertEquals(mock_post.mock_calls, [])
+        self.assertEquals(res, {
+            'name': 'AppGroup',
+            'owner': 'nobody@example.com',
+            'products': {
+                "cloudwatch": ["tag1_tagA", "tag2_tagA", "tag1_tagB", "tag2_tagB"],
+                "ec2": ["tag1_tagB", "tag2_tagB"],
+                "ebs": [ "tag1_tagA", "tag2_tagA"],
+            }
+        })
+
+    def test_set_application_group(self, mock_post, mock_get, mock_requests, mock_logger):
+        products = {
+            "cloudwatch": ["tag1_tagA", "tag2_tagA", "tag1_tagB", "tag2_tagB"],
+            "ec2": ["tag1_tagB", "tag2_tagB"],
+            "ebs": [ "tag1_tagA", "tag2_tagA"],
+        }
+        params = {'owner': 'foo@example.com', 'name': 'MyName', 'data': products}
+
+        g = Groups(self.dummy_ice_url, dry_run=False)
+        g.set_application_group('MyName', products, 'foo@example.com')
+        self.assertEquals(mock_logger.mock_calls, [
+            call.info("POSTing to /saveApplicationGroup with data: {'owner': "
+                      "'foo@example.com', 'data': {'ec2': ['tag1_tagB', 'tag2_tagB'],"
+                      " 'cloudwatch': ['tag1_tagA', 'tag2_tagA', 'tag1_tagB', "
+                      "'tag2_tagB'], 'ebs': ['tag1_tagA', 'tag2_tagA']},"
+                      " 'name': 'MyName'}")
+        ])
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [])
+        self.assertEquals(mock_post.mock_calls, [
+            call('saveApplicationGroup', params)
+        ])
+
+    def test_set_application_group_dry_run(self, mock_post, mock_get, mock_requests, mock_logger):
+        products = {
+            "cloudwatch": ["tag1_tagA", "tag2_tagA", "tag1_tagB", "tag2_tagB"],
+            "ec2": ["tag1_tagB", "tag2_tagB"],
+            "ebs": [ "tag1_tagA", "tag2_tagA"],
+        }
+        params = {'owner': 'foo@example.com', 'name': 'MyName', 'data': products}
+
+        g = Groups(self.dummy_ice_url, dry_run=True)
+        mock_logger.reset_mock()
+        g.set_application_group('MyName', products, 'foo@example.com')
+        self.assertEquals(mock_logger.mock_calls, [
+            call.warning("DRY_RUN: would POST to /saveApplicationGroup with data: {'owner': "
+                      "'foo@example.com', 'data': {'ec2': ['tag1_tagB', 'tag2_tagB'],"
+                      " 'cloudwatch': ['tag1_tagA', 'tag2_tagA', 'tag1_tagB', "
+                      "'tag2_tagB'], 'ebs': ['tag1_tagA', 'tag2_tagA']},"
+                      " 'name': 'MyName'}")
+        ])
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [])
+        self.assertEquals(mock_post.mock_calls, [])
+
+    def test_delete_application_group_dry_run(self, mock_post, mock_get, mock_requests, mock_logger):
+        groups = Groups(self.dummy_ice_url, dry_run=True)
+        mock_logger.reset_mock()
         groups.delete_application_group('foo')
-        self.assertEquals(self.mock_logger.mock_calls, [])
+        self.assertEquals(mock_logger.mock_calls,
+                          [call.warning('Would GET deleteApplicationGroup?name=foo')]
+        )
+        self.assertEquals(mock_get.mock_calls, [])
+        self.assertEquals(mock_post.mock_calls, [])
+
+    def test_delete_application_group(self, mock_post, mock_get, mock_requests, mock_logger):
+        groups = Groups(self.dummy_ice_url, dry_run=False)
+        mock_logger.reset_mock()
+        groups.delete_application_group('foo')
+        self.assertEquals(mock_logger.mock_calls, [])
         self.assertEquals(mock_get.mock_calls, [call('deleteApplicationGroup?name=foo')])
-        self.assertEquals(self.mock_post.mock_calls, [])
+        self.assertEquals(mock_post.mock_calls, [])
+
+
+@patch('ice_pick.groups.logger', spec_set=logging.Logger)
+@patch('ice_pick.groups._requests')
+class TestGroupsRequests(unittest.TestCase):
+
+    def test_ice_get(self, mock_requests, mock_logger):
+        url = 'http://foo.com/dashboard/foobar'
+        mock_result = Mock(status_code=200)
+        mock_result.json.return_value = {"status": 200, "data": ["foo","bar"] }
+        mock_requests.get.return_value = mock_result
+
+        g = Groups('http://foo.com/', dry_run=False)
+        mock_logger.reset_mock()
+        res = g._ice_get('foobar')
+        self.assertEquals(mock_logger.mock_calls,
+                          [call.debug('GETing http://foo.com/dashboard/foobar')]
+        )
+        self.assertEquals(mock_requests.mock_calls, [
+            call.get('http://foo.com/dashboard/foobar'),
+            call.get().json()
+        ])
+        self.assertEquals(res, ['foo', 'bar'])
+        
+    """
+
+    def test_ice_get_request_error(self, mock_post, mock_get, mock_requests, mock_logger):
+    def test_ice_get_response_error(self, mock_post, mock_get, mock_requests, mock_logger):
+    def test_ice_get_no_data(self, mock_post, mock_get, mock_requests, mock_logger):
+    def test_ice_post(self, mock_post, mock_get, mock_requests, mock_logger):
+    def test_ice_post_request_error(self, mock_post, mock_get, mock_requests, mock_logger):
+    def test_ice_post_response_error(self, mock_post, mock_get, mock_requests, mock_logger):
+    def test_ice_post_no_data(self, mock_post, mock_get, mock_requests, mock_logger):
+    def test_get_application_group_names(self, mock_requests, mock_logger):
+    get_all_resource_groups - multiple accounts?
+    anything else with an 'acct' param - multiple accounts?
+    """
 
 if __name__ == '__main__':
     unittest.main()
