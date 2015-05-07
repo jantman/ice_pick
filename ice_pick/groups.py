@@ -57,10 +57,23 @@ class Groups(object):
         """
         self.dry_run = dry_run
         self.ice_url = ice_url
+        self.auth = None
         if not self.url_re.match(ice_url):
             raise ValueError("ice_url must match {re}".format(re=self.url_re.pattern))
         if self.dry_run:
             logger.warning("DRY RUN only - will not make any changes")
+
+    def set_http_auth(self, auth):
+        """
+        Set the value of the optional 'auth' parameter on
+        requests.post calls to get data. See
+        http://docs.python-requests.org/en/latest/user/authentication/
+        for more information.
+
+        :param auth: requests module auth parameter
+        :type auth: mixed
+        """
+        self.auth = auth
 
     def _ice_get(self, path):
         """
@@ -75,7 +88,7 @@ class Groups(object):
         """
         url = _urlparse.urljoin(self.ice_url + 'dashboard/', path)
         logger.debug("GETing {u}".format(u=url))
-        res = _requests.get(url)
+        res = _requests.get(url, auth=self.auth)
         if res.status_code != 200:
             raise APIRequestException('GET', url, res.status_code)
         resp = res.json()
@@ -103,7 +116,7 @@ class Groups(object):
             logger.warning("DRY RUN: Would POST to {u}: {p}".format(u=url, p=params))
             return
         logger.debug("POSTing to {u}: {p}".format(u=url, p=params))
-        res = _requests.post(url, data=json.dumps(params))
+        res = _requests.post(url, data=json.dumps(params), auth=self.auth)
         if res.status_code != 200:
             raise APIRequestException('POST', url, res.status_code)
         resp = res.json()
