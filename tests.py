@@ -707,9 +707,38 @@ class TestGroupsRequests(unittest.TestCase):
     @freeze_time('2015-04-10 05:00:00')
     def test_get_application_group_names(self, mock_requests, mock_logger):
         mock_api = Mock()
+        mock_api.get_data.return_value = {
+            u'status': 200,
+            u'stats': {
+                u'foo': {
+                    u'max': 21.597462450416614,
+                    u'average': 21.597462450416614,
+                    u'total': 21.597462450416614
+                },
+                u'bar': {
+                    u'max': 1.6682055999999998,
+                    u'average': 1.6682055999999998,
+                    u'total': 1.6682055999999998
+                },
+                u'baz': {
+                    u'max': 26.88331985366129,
+                    u'average': 26.88331985366129,
+                    u'total': 26.88331985366129
+                },
+            },
+            u'hours': [151],
+            u'start': 1430438400000,
+            u'time': [1430438400000],
+            u'data': {
+                u'foo': [21.597462450416614],
+                u'bar': [1.6682055999999998],
+                u'baz': [26.88331985366129],
+            },
+            u'groupBy': u'ApplicationGroup'
+        }
+        
         with patch('ice_pick.groups.APIRequest', spec_set=APIRequest) as mock_api_constr:
             mock_api_constr.return_value = mock_api
-            mock_api.get_data.return_value = {'foo': {'bar': 'baz'}, 'blam': {'blarg': 'quux'}}
             g = Groups('http://foo.com/', dry_run=False)
             res = g.get_application_group_names()
         self.assertEqual(mock_api_constr.mock_calls[0], call('http://foo.com/'))
@@ -720,7 +749,56 @@ class TestGroupsRequests(unittest.TestCase):
             call.set_start(datetime.datetime(2015, 3, 13, 5, 0)),
             call.get_data(),
         ])
-        self.assertEqual(res, ['foo', 'blam'])
+        self.assertEqual(sorted(res), [u'bar', u'baz', u'foo'])
+        self.assertEqual(mock_logger.mock_calls, [])
+
+    @freeze_time('2015-04-10 05:00:00')
+    def test_get_application_group_names_auth(self, mock_requests, mock_logger):
+        mock_api = Mock()
+        mock_api.get_data.return_value = {
+            u'status': 200,
+            u'stats': {
+                u'foo': {
+                    u'max': 21.597462450416614,
+                    u'average': 21.597462450416614,
+                    u'total': 21.597462450416614
+                },
+                u'bar': {
+                    u'max': 1.6682055999999998,
+                    u'average': 1.6682055999999998,
+                    u'total': 1.6682055999999998
+                },
+                u'baz': {
+                    u'max': 26.88331985366129,
+                    u'average': 26.88331985366129,
+                    u'total': 26.88331985366129
+                },
+            },
+            u'hours': [151],
+            u'start': 1430438400000,
+            u'time': [1430438400000],
+            u'data': {
+                u'foo': [21.597462450416614],
+                u'bar': [1.6682055999999998],
+                u'baz': [26.88331985366129],
+            },
+            u'groupBy': u'ApplicationGroup'
+        }
+        with patch('ice_pick.groups.APIRequest', spec_set=APIRequest) as mock_api_constr:
+            mock_api_constr.return_value = mock_api
+            g = Groups('http://foo.com/', dry_run=False)
+            g.set_http_auth(('user', 'pass'))
+            res = g.get_application_group_names()
+        self.assertEqual(mock_api_constr.mock_calls[0], call('http://foo.com/'))
+        self.assertEqual(mock_api.mock_calls, [
+            call.set_http_auth(('user', 'pass')),
+            call.set_aggregate('stats'),
+            call.set_group_by(_group_by.APPLICATION_GROUP),
+            call.set_end(datetime.datetime(2015, 4, 10, 5, 0)),
+            call.set_start(datetime.datetime(2015, 3, 13, 5, 0)),
+            call.get_data(),
+        ])
+        self.assertEqual(sorted(res), [u'bar', u'baz', u'foo'])
         self.assertEqual(mock_logger.mock_calls, [])
 
 if __name__ == '__main__':

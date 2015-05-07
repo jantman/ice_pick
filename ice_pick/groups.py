@@ -225,12 +225,14 @@ class Groups(object):
         end_dt = datetime.datetime.utcnow()
         start_dt = end_dt - datetime.timedelta(weeks=4)
         req = APIRequest(self.ice_url)
+        if self.auth:
+            req.set_http_auth(self.auth)
         req.set_aggregate('stats')
         req.set_group_by(_group_by.APPLICATION_GROUP)
         req.set_end(end_dt)
         req.set_start(start_dt)
         result = req.get_data()
-        names = [k for k in result]
+        names = [k for k in result['stats']]
         return names
 
     def get_application_group(self, group_name):
