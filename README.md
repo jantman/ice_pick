@@ -1,6 +1,7 @@
 # Ice Pick
 
-A Python library that allows easy access to AWS billing data collected by the Netflix OSS Ice tool.
+A Python library that allows easy access to AWS billing data collected by the Netflix OSS Ice tool,
+as well as manipulation of the configured Application Groups.
 
 
 ## Installation
@@ -216,7 +217,221 @@ You can check which filters were active on the last request, and which filters w
 
     api_request.get_filters()
 
+### Using HTTP Request Authentication
+
+If your Ice installation is behind HTTP authentication (i.e. being served by a proxy with
+HTTP authentication enabled), you can use any form of authentication that is supported
+by the [requests library](http://docs.python-requests.org/en/latest/user/authentication/);
+simply call the ``set_http_auth()`` method with the same parameter that needs to be
+passed to the requests object.
+
+HTTP Basic authentication:
+
+    from ice_pick.api import APIRequest
     
+    ice_url = 'http://example.com/ice/'  # URL to your Ice instance
+    api_request = APIRequest(ice_url)
+    api_request.set_http_auth(('myuser', 'mypass'))
+    data = api_request.get_data()
+
+HTTP Digest authentication:
+
+    from ice_pick.api import APIRequest
+    from requests.auth import HTTPDigestAuth
+    
+    ice_url = 'http://example.com/ice/'  # URL to your Ice instance
+    api_request = APIRequest(ice_url)
+    api_request.set_http_auth(HTTPDigestAuth('user', 'pass'))
+    data = api_request.get_data()
+
+## Working With Application Groups
+
+ice_pick now includes a Groups class to query and manipulate Application Groups
+and related data. This is useful if you have ``ice.customTags`` set in
+``ice.properties`` and want to automatically create Application Groups for them.
+
+### Query Accounts, Products and Resource Groups
+
+    >>> from pprint import pprint
+    >>> from ice_pick.groups import Groups
+    >>> g = Groups('http://ice.example.com/')
+    >>> accounts = g.get_account_names()
+    >>> pprint(accounts)
+    [u'123456789012', u'987654321098']
+    >>> regions = g.get_regions_for_account(accounts)
+    >>> pprint(regions)
+    [u'ap-northeast-1',
+     u'ap-southeast-1',
+     u'ap-southeast-2',
+     u'eu-west-1',
+     u'sa-east-1',
+     u'us-east-1',
+     u'us-west-1',
+     u'us-west-2']
+    >>> products = g.get_products(accounts, regions)
+    >>> pprint(products)
+    [u'ebs',
+     u'ec2',
+     u'ec2_instance',
+     u'rds',
+     u's3']
+    >>> resource_groups = g.get_all_resource_groups(accounts, regions, products)
+    >>> pprint(resource_groups)
+    [u'SomeService/Foo_Prod',
+     u'SomeService/Foo_Test',
+     u'SomeService/Foo_Unknown',
+     u'SomeService/Bar_Dev',
+     u'SomeService/Bar_Prod',
+     u'SomeService/Bar_Test',
+     u'SomeService/Baz_Dev',
+     u'SomeService/Baz_Prod',
+     u'SomeService/Baz_Test',
+     u'ebs',
+     u'ec2',
+     u'ec2_instance',
+     u'rds',
+     u's3']
+    >>> rg_lists = g.get_resource_group_lists()
+    >>> pprint(rg_lists)
+    {u'AWS Key Management Service': [],
+     u'ebs': [u'SomeService/Foo_Prod',
+              u'SomeService/Foo_Test',
+              u'SomeService/Foo_Unknown',
+              u'SomeService/Bar_Dev',
+              u'SomeService/Bar_Prod',
+              u'SomeService/Baz_Dev',
+              u'SomeService/Baz_Prod',
+              u'SomeService/Baz_Test',
+              u'ebs'],
+     u'ec2': [u'someapp',
+              u'someapp_Prod',
+              u'someapp_Test',
+              u'SomeService/Foo_Prod',
+              u'SomeService/Foo_Test',
+              u'SomeService/Foo_Unknown',
+              u'SomeService/Bar_Dev',
+              u'SomeService/Bar_Prod',
+              u'SomeService/Bar_Test',
+              u'SomeService/Baz_Dev',
+              u'SomeService/Baz_Prod',
+              u'SomeService/Baz_Test',
+              u'ec2'],
+     u'ec2_instance': [u'someapp',
+                       u'SomeService/Foo_Prod',
+                       u'SomeService/Foo_Test',
+                       u'SomeService/Foo_Unknown',
+                       u'SomeService/Bar_Dev',
+                       u'SomeService/Bar_Prod',
+                       u'SomeService/Baz_Dev',
+                       u'SomeService/Baz_Prod',
+                       u'SomeService/Baz_Test',
+                       u'ec2_instance'],
+     u'rds': [u'rds',
+              u'someapp',
+              u'someapp_Prod',
+              u'someapp_Test'],
+     u'redshift': [],
+     u's3': [u's3',
+             u'someapp_Prod'],
+     u'ses': [],
+     u'simpledb': [],
+     u'sns': [],
+     u'sqs': [],
+     u'storage_gateway': [],
+     u'sws': [],
+     u'vpc': []}
+    >>> app_groups = g.get_application_group_names()
+    >>> pprint(app_groups)
+    [u'SomeService',
+     u'Foobar',
+     u'AMIs']
+
+### Query an Existing Application Group
+
+    >>> from pprint import pprint
+    >>> from ice_pick.groups import Groups
+    >>> g = Groups('http://ice.example.com/')
+    >>> grp = g.get_application_group('Foobar')
+    >>> pprint(grp)
+    {'name': u'Foobar',
+     'owner': u'me@example.com',
+     'products': {u'ec2': [u'someapp', u'someapp_Prod', u'someapp_Test'],
+                  u'ec2_instance': [u'someapp'],
+                  u'rds': [u'someapp', u'someapp_Prod', u'someapp_Test'],
+                  u's3': [u'someapp_Prod']}}
+
+### Create or Update an Application Group
+
+Application group of all untagged resources:
+
+    >>> from pprint import pprint
+    >>> from ice_pick.groups import Groups
+    >>> g = Groups('http://ice.example.com/')
+    >>> rg_lists = g.get_resource_group_lists()
+    >>> 
+    >>> untagged = {}
+    >>> for product in rg_lists:
+    ...     for rg in rg_lists[product]:
+    ...         if product == rg:
+    ...             untagged[product] = [rg]
+    ... 
+    >>> pprint(untagged)
+    {u'cloudfront': [u'cloudfront'],
+     u'cloudwatch': [u'cloudwatch'],
+     u'ebs': [u'ebs'],
+     u'ec2': [u'ec2'],
+     u'ec2_instance': [u'ec2_instance'],
+     u'elasticache': [u'elasticache'],
+     u'rds': [u'rds'],
+     u'route53': [u'route53'],
+     u's3': [u's3']}
+    >>> g.set_application_group('Untagged', untagged, 'me@example.com')
+    {}
+
+Application group for all Resource Groups (tags)
+starting with 'SomeService':
+
+    >>> from collections import defaultdict
+    >>> from pprint import pprint
+    >>> from ice_pick.groups import Groups
+    >>> g = Groups('http://ice.example.com/')
+    >>> rg_lists = g.get_resource_group_lists()
+    >>> 
+    >>> SomeService = defaultdict(list)
+    >>> for product in rg_lists:
+    ...     for rg in rg_lists[product]:
+    ...         if rg.startswith('SomeService'):
+    ...             SomeService[product].append(rg)
+    ... 
+    >>> pprint(dict(SomeService))
+    {u'ebs': [u'SomeService/Foo_Prod',
+              u'SomeService/Foo_Test',
+              u'SomeService/Foo_Unknown',
+              u'SomeService/Bar_Dev',
+              u'SomeService/Bar_Prod',
+              u'SomeService/Baz_Dev',
+              u'SomeService/Baz_Prod',
+              u'SomeService/Baz_Test'],
+     u'ec2': [u'SomeService/Foo_Prod',
+              u'SomeService/Foo_Test',
+              u'SomeService/Foo_Unknown',
+              u'SomeService/Bar_Dev',
+              u'SomeService/Bar_Prod',
+              u'SomeService/Bar_Test',
+              u'SomeService/Baz_Dev',
+              u'SomeService/Baz_Prod',
+              u'SomeService/Baz_Test'],
+     u'ec2_instance': [u'SomeService/Foo_Prod',
+                       u'SomeService/Foo_Test',
+                       u'SomeService/Foo_Unknown',
+                       u'SomeService/Bar_Dev',
+                       u'SomeService/Bar_Prod',
+                       u'SomeService/Baz_Dev',
+                       u'SomeService/Baz_Prod',
+                       u'SomeService/Baz_Test']}
+    >>> g.set_application_group('SomeService', SomeService, 'me@example.com')
+    {}
+
 ## License
 
 Copyright 2014 Demand Media
