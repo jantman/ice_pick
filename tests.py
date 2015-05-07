@@ -110,6 +110,12 @@ class TestAPIRequest(unittest.TestCase):
         self.assertEquals(request_filters[APIFilters.IS_COST], is_cost)
         self.assertEquals(request_filters[dummy_filter], dummy_value)
 
+    def test_set_http_auth(self):
+        api_request = APIRequest(self.dummy_ice_url)
+        self.assertEquals(api_request.auth, None)
+        api_request.set_http_auth(('foo', 'bar'))
+        self.assertEquals(api_request.auth, ('foo', 'bar'))
+
     def _test_set_list(self, fn, filter_name):
         # Type error exception test
         self.assertRaises(TypeError,
@@ -252,6 +258,7 @@ class TestGroups(unittest.TestCase):
         g = Groups(self.dummy_ice_url)
         self.assertEquals(g.ice_url, self.dummy_ice_url)
         self.assertEquals(g.dry_run, False)
+        self.assertEquals(g.auth, None)
         self.assertEquals(mock_logger.mock_calls, [])
         self.assertEquals(mock_requests.mock_calls, [])
         self.assertEquals(mock_get.mock_calls, [])
@@ -270,6 +277,18 @@ class TestGroups(unittest.TestCase):
         self.assertEquals(mock_logger.mock_calls,
                           [call.warning('DRY RUN only - will not make any changes')]
         )
+        self.assertEquals(mock_requests.mock_calls, [])
+        self.assertEquals(mock_get.mock_calls, [])
+        self.assertEquals(mock_post.mock_calls, [])
+
+    def test_set_auth(self, mock_post, mock_get, mock_requests, mock_logger):
+        m = Mock()
+        g = Groups(self.dummy_ice_url)
+        g.set_http_auth(m)
+        self.assertEquals(g.ice_url, self.dummy_ice_url)
+        self.assertEquals(g.dry_run, False)
+        self.assertEquals(g.auth, m)
+        self.assertEquals(mock_logger.mock_calls, [])
         self.assertEquals(mock_requests.mock_calls, [])
         self.assertEquals(mock_get.mock_calls, [])
         self.assertEquals(mock_post.mock_calls, [])
@@ -507,7 +526,26 @@ class TestGroupsRequests(unittest.TestCase):
                           [call.debug('GETing http://foo.com/dashboard/foobar')]
         )
         self.assertEquals(mock_requests.mock_calls, [
-            call.get('http://foo.com/dashboard/foobar'),
+            call.get('http://foo.com/dashboard/foobar', auth=None),
+            call.get().json()
+        ])
+        self.assertEquals(res, ['foo', 'bar'])
+
+    def test_ice_get_auth(self, mock_requests, mock_logger):
+        url = 'http://foo.com/dashboard/foobar'
+        mock_result = Mock(status_code=200)
+        mock_result.json.return_value = {"status": 200, "data": ["foo","bar"] }
+        mock_requests.get.return_value = mock_result
+
+        g = Groups('http://foo.com/', dry_run=False)
+        g.set_http_auth(('myuser', 'mypass'))
+        mock_logger.reset_mock()
+        res = g._ice_get('foobar')
+        self.assertEquals(mock_logger.mock_calls,
+                          [call.debug('GETing http://foo.com/dashboard/foobar')]
+        )
+        self.assertEquals(mock_requests.mock_calls, [
+            call.get('http://foo.com/dashboard/foobar', auth=('myuser', 'mypass')),
             call.get().json()
         ])
         self.assertEquals(res, ['foo', 'bar'])
@@ -523,7 +561,7 @@ class TestGroupsRequests(unittest.TestCase):
                           g._ice_get,
                           'foobar')
         self.assertEquals(mock_logger.mock_calls, [call.debug('GETing http://foo.com/dashboard/foobar')])
-        self.assertEquals(mock_requests.mock_calls, [call.get('http://foo.com/dashboard/foobar')])
+        self.assertEquals(mock_requests.mock_calls, [call.get('http://foo.com/dashboard/foobar', auth=None)])
 
     def test_ice_get_response_error(self, mock_requests, mock_logger):
         url = 'http://foo.com/dashboard/foobar'
@@ -538,7 +576,7 @@ class TestGroupsRequests(unittest.TestCase):
                           'foobar')
         self.assertEquals(mock_logger.mock_calls, [call.debug('GETing http://foo.com/dashboard/foobar')])
         self.assertEquals(mock_requests.mock_calls, [
-            call.get('http://foo.com/dashboard/foobar'),
+            call.get('http://foo.com/dashboard/foobar', auth=None),
             call.get().json()
         ])
 
@@ -555,7 +593,7 @@ class TestGroupsRequests(unittest.TestCase):
                           [call.debug('GETing http://foo.com/dashboard/foobar')]
         )
         self.assertEquals(mock_requests.mock_calls, [
-            call.get('http://foo.com/dashboard/foobar'),
+            call.get('http://foo.com/dashboard/foobar', auth=None),
             call.get().json()
         ])
         self.assertEquals(res, {})
@@ -573,7 +611,26 @@ class TestGroupsRequests(unittest.TestCase):
                           [call.debug("POSTing to http://foo.com/dashboard/foobar: {'baz': 'blam'}")]
         )
         self.assertEquals(mock_requests.mock_calls, [
-            call.post('http://foo.com/dashboard/foobar', data='{"baz": "blam"}'),
+            call.post('http://foo.com/dashboard/foobar', data='{"baz": "blam"}', auth=None),
+            call.post().json()
+        ])
+        self.assertEquals(res, {})
+
+    def test_ice_post_auth(self, mock_requests, mock_logger):
+        url = 'http://foo.com/dashboard/foobar'
+        mock_result = Mock(status_code=200)
+        mock_result.json.return_value = {"status": 200}
+        mock_requests.post.return_value = mock_result
+
+        g = Groups('http://foo.com/', dry_run=False)
+        g.set_http_auth(('myuser', 'mypass'))
+        mock_logger.reset_mock()
+        res = g._ice_post('foobar', {'baz': 'blam'})
+        self.assertEquals(mock_logger.mock_calls,
+                          [call.debug("POSTing to http://foo.com/dashboard/foobar: {'baz': 'blam'}")]
+        )
+        self.assertEquals(mock_requests.mock_calls, [
+            call.post('http://foo.com/dashboard/foobar', data='{"baz": "blam"}', auth=('myuser', 'mypass')),
             call.post().json()
         ])
         self.assertEquals(res, {})
@@ -605,7 +662,7 @@ class TestGroupsRequests(unittest.TestCase):
                           [call.debug("POSTing to http://foo.com/dashboard/foobar: {'baz': 'blam'}")]
         )
         self.assertEquals(mock_requests.mock_calls, [
-            call.post('http://foo.com/dashboard/foobar', data='{"baz": "blam"}')
+            call.post('http://foo.com/dashboard/foobar', data='{"baz": "blam"}', auth=None)
         ])
 
     def test_ice_post_response_error(self, mock_requests, mock_logger):
@@ -625,7 +682,7 @@ class TestGroupsRequests(unittest.TestCase):
                           [call.debug("POSTing to http://foo.com/dashboard/foobar: {'baz': 'blam'}")]
         )
         self.assertEquals(mock_requests.mock_calls, [
-            call.post('http://foo.com/dashboard/foobar', data='{"baz": "blam"}'),
+            call.post('http://foo.com/dashboard/foobar', data='{"baz": "blam"}', auth=None),
             call.post().json()
         ])
 
@@ -642,7 +699,7 @@ class TestGroupsRequests(unittest.TestCase):
                           [call.debug("POSTing to http://foo.com/dashboard/foobar: {'baz': 'blam'}")]
         )
         self.assertEquals(mock_requests.mock_calls, [
-            call.post('http://foo.com/dashboard/foobar', data='{"baz": "blam"}'),
+            call.post('http://foo.com/dashboard/foobar', data='{"baz": "blam"}', auth=None),
             call.post().json()
         ])
         self.assertEquals(res, {'foo': 'bar'})
@@ -650,9 +707,38 @@ class TestGroupsRequests(unittest.TestCase):
     @freeze_time('2015-04-10 05:00:00')
     def test_get_application_group_names(self, mock_requests, mock_logger):
         mock_api = Mock()
+        mock_api.get_data.return_value = {
+            u'status': 200,
+            u'stats': {
+                u'foo': {
+                    u'max': 21.597462450416614,
+                    u'average': 21.597462450416614,
+                    u'total': 21.597462450416614
+                },
+                u'bar': {
+                    u'max': 1.6682055999999998,
+                    u'average': 1.6682055999999998,
+                    u'total': 1.6682055999999998
+                },
+                u'baz': {
+                    u'max': 26.88331985366129,
+                    u'average': 26.88331985366129,
+                    u'total': 26.88331985366129
+                },
+            },
+            u'hours': [151],
+            u'start': 1430438400000,
+            u'time': [1430438400000],
+            u'data': {
+                u'foo': [21.597462450416614],
+                u'bar': [1.6682055999999998],
+                u'baz': [26.88331985366129],
+            },
+            u'groupBy': u'ApplicationGroup'
+        }
+        
         with patch('ice_pick.groups.APIRequest', spec_set=APIRequest) as mock_api_constr:
             mock_api_constr.return_value = mock_api
-            mock_api.get_data.return_value = {'foo': {'bar': 'baz'}, 'blam': {'blarg': 'quux'}}
             g = Groups('http://foo.com/', dry_run=False)
             res = g.get_application_group_names()
         self.assertEqual(mock_api_constr.mock_calls[0], call('http://foo.com/'))
@@ -663,7 +749,56 @@ class TestGroupsRequests(unittest.TestCase):
             call.set_start(datetime.datetime(2015, 3, 13, 5, 0)),
             call.get_data(),
         ])
-        self.assertEqual(res, ['foo', 'blam'])
+        self.assertEqual(sorted(res), [u'bar', u'baz', u'foo'])
+        self.assertEqual(mock_logger.mock_calls, [])
+
+    @freeze_time('2015-04-10 05:00:00')
+    def test_get_application_group_names_auth(self, mock_requests, mock_logger):
+        mock_api = Mock()
+        mock_api.get_data.return_value = {
+            u'status': 200,
+            u'stats': {
+                u'foo': {
+                    u'max': 21.597462450416614,
+                    u'average': 21.597462450416614,
+                    u'total': 21.597462450416614
+                },
+                u'bar': {
+                    u'max': 1.6682055999999998,
+                    u'average': 1.6682055999999998,
+                    u'total': 1.6682055999999998
+                },
+                u'baz': {
+                    u'max': 26.88331985366129,
+                    u'average': 26.88331985366129,
+                    u'total': 26.88331985366129
+                },
+            },
+            u'hours': [151],
+            u'start': 1430438400000,
+            u'time': [1430438400000],
+            u'data': {
+                u'foo': [21.597462450416614],
+                u'bar': [1.6682055999999998],
+                u'baz': [26.88331985366129],
+            },
+            u'groupBy': u'ApplicationGroup'
+        }
+        with patch('ice_pick.groups.APIRequest', spec_set=APIRequest) as mock_api_constr:
+            mock_api_constr.return_value = mock_api
+            g = Groups('http://foo.com/', dry_run=False)
+            g.set_http_auth(('user', 'pass'))
+            res = g.get_application_group_names()
+        self.assertEqual(mock_api_constr.mock_calls[0], call('http://foo.com/'))
+        self.assertEqual(mock_api.mock_calls, [
+            call.set_http_auth(('user', 'pass')),
+            call.set_aggregate('stats'),
+            call.set_group_by(_group_by.APPLICATION_GROUP),
+            call.set_end(datetime.datetime(2015, 4, 10, 5, 0)),
+            call.set_start(datetime.datetime(2015, 3, 13, 5, 0)),
+            call.get_data(),
+        ])
+        self.assertEqual(sorted(res), [u'bar', u'baz', u'foo'])
         self.assertEqual(mock_logger.mock_calls, [])
 
 if __name__ == '__main__':
