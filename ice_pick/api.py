@@ -96,9 +96,22 @@ class APIRequest(object):
         "http" or "https://" and end with "/".
         :type ice_url: str or unicode.
         '''
+        self.auth = None
         self.ice_url = ice_url
         self._filters = APIFilters.default_filters()
         self._set_filters(**filters)
+
+    def set_http_auth(self, auth):
+        """
+        Set the value of the optional 'auth' parameter on
+        requests.post calls to get data. See
+        http://docs.python-requests.org/en/latest/user/authentication/
+        for more information.
+
+        :param auth: requests module auth parameter
+        :type auth: mixed
+        """
+        self.auth = auth
 
     def _set_filters(self, **filters):
         for filter_key, value in filters.iteritems():
@@ -202,7 +215,7 @@ class APIRequest(object):
         headers = {
             'content-type': 'application/json;charset=utf-8'
         }
-        r = _requests.post(request_url, data=data_filters, headers=headers)
+        r = _requests.post(request_url, data=data_filters, headers=headers, auth=self.auth)
         status_code = r.status_code
         if status_code == 200:
             response = r.content
