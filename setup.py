@@ -13,8 +13,12 @@ packages = [
 ]
 
 test_requires = []
-with open('requirements.txt') as f:
+with open('requirements_test.txt') as f:
     test_requires = f.read().split('\n')
+
+requires = []
+with open('requirements.txt') as f:
+    requires = f.read().split('\n')
 
 setup(name=ice_pick.__title__,
       version=ice_pick.__version__,
@@ -25,7 +29,7 @@ setup(name=ice_pick.__title__,
       license='Apache 2.0',
       packages=packages,
       package_dir={'ice_pick': 'ice_pick'},
-      install_requires=['requests>=2.2.1'],
+      install_requires=requires,
       tests_require=test_requires,
       setup_requires=['nose==1.3.0'],
       classifiers=('Development Status :: 5 - Production/Stable',
